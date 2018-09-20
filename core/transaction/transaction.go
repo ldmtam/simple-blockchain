@@ -9,6 +9,7 @@ import (
 	"github.com/simpleblockchain/account"
 	"github.com/simpleblockchain/common"
 	"github.com/simpleblockchain/crypto/sha3"
+	"golang.org/x/crypto/ed25519"
 )
 
 var (
@@ -102,23 +103,27 @@ func (tx *TxImpl) Unmarshal(data []byte) (*TxImpl, error) {
 }
 
 func (tx *TxImpl) String() string {
-	return fmt.Sprintf(`{"hash":"%s", "from":"%s", "to":"%s", "nonce":"%s", "value":"%s", "timestamp":"%s"}`,
+	return fmt.Sprintf(`{"hash":"%s", "from":"%s", "to":"%s", "nonce":"%v", "value":"%s", "timestamp":"%v"}`,
 		tx.hash.String(),
 		tx.from,
 		tx.to,
-		string(tx.nonce),
+		tx.nonce,
 		tx.value,
-		string(tx.timestamp),
+		tx.timestamp,
 	)
 }
 
 // Sign signs the tx
-func (tx *TxImpl) Sign(kp account.KeyPair) ([]byte, error) {
-	return kp.Sign(tx.hash.CloneBytes()), nil
+func (tx *TxImpl) Sign(kp account.KeyPair) {
+	sig := kp.Sign(tx.hash.CloneBytes())
+	tx.signature = sig
 }
 
 // Verify verifies signature of tx
-func (tx *TxImpl) Verify(kp account.KeyPair) bool {
+func (tx *TxImpl) Verify(pubKey []byte) bool {
+	kp := &account.KeyPairImpl{
+		PublicKey: ed25519.PublicKey(pubKey),
+	}
 	return kp.Verify(tx.signature, tx.hash.CloneBytes())
 }
 

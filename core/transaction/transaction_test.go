@@ -96,9 +96,9 @@ func TestSignTx(t *testing.T) {
 	err := fromKp.Decode(fromPrivKey, fromPubKey)
 	assert.Nil(t, err)
 
-	sig, err := tx.Sign(fromKp)
+	tx.Sign(fromKp)
 	assert.Nil(t, err)
-	assert.NotNil(t, sig)
+	assert.NotNil(t, tx.signature)
 
 	toKp := &account.KeyPairImpl{}
 	err = toKp.Decode(toPrivKey, toPubKey)
