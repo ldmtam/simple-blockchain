@@ -1,0 +1,12 @@
+syntax = "proto3";
+package pb;
+
+message Transaction {
+    bytes hash = 1;
+    bytes from = 2;
+    bytes to = 3;
+    bytes value = 4;
+    uint64 nonce = 5;
+    int64 timestamp = 6;
+    bytes signature = 7;
+}

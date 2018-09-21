@@ -120,13 +120,14 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		"hash":  hex.EncodeToString(txHashInBytes),
 	}).Info("Transaction data")
 
-	bytes, err := tx.Marshal()
+	pbMess, err := tx.Marshal()
 	if err != nil {
-		fmt.Println("@@")
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("cannot encode transaction")
 	}
-	fmt.Println(bytes)
 
-	d := map[string]string{"tx_hash": hex.EncodeToString(txHashInBytes)}
+	d := map[string]string{"tx_hash": hex.EncodeToString([]byte(pbMess))}
 	json.NewEncoder(w).Encode(d)
 }
 

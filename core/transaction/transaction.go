@@ -1,19 +1,20 @@
 package transaction
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/simpleblockchain/account"
 	"github.com/simpleblockchain/common"
+	"github.com/simpleblockchain/core/pb"
 	"github.com/simpleblockchain/crypto/sha3"
 	"golang.org/x/crypto/ed25519"
 )
 
 var (
-	errTxInvalidArgument = errors.New("invalid argument when creating tx")
+	errTxInvalidArgument         = errors.New("invalid argument when creating tx")
+	errInvalidProtoToTransaction = errors.New("protobuf message cannot be converted into Transaction")
 )
 
 // TxImpl struct of a transaction
@@ -79,27 +80,37 @@ func (tx *TxImpl) Hash() common.Hash {
 	return tx.hash
 }
 
-/**
- * For now, we will use json as encoding and decoding algorithm for our transaction type. Will
- * use more efficient algorithm as protobuf later.
- */
+// Marshal encodes tx using protobuf
+func (tx *TxImpl) Marshal() (string, error) {
+	txHash := tx.hash.CloneBytes()
+	txValue := tx.value.Bytes()
 
-// Marshal encode tx
-func (tx *TxImpl) Marshal() ([]byte, error) {
-	bytes, err := json.Marshal(tx)
-	if err != nil {
-		return nil, err
+	pbTx := &pb.Transaction{
+		Hash:      txHash,
+		From:      tx.from,
+		To:        tx.to,
+		Value:     txValue,
+		Nonce:     tx.nonce,
+		Timestamp: tx.timestamp,
 	}
-	return bytes, nil
+
+	return pbTx.String(), nil
 }
 
-// Unmarshal decode tx
-func (tx *TxImpl) Unmarshal(data []byte) (*TxImpl, error) {
-	err := json.Unmarshal(data, &tx)
+// Unmarshal decode tx using protobuf
+func (tx *TxImpl) Unmarshal(data string) error {
+	pbTx := &pb.Transaction{}
+	err := pbTx.XXX_Unmarshal([]byte(data))
 	if err != nil {
-		return nil, err
+		return errInvalidProtoToTransaction
 	}
-	return tx, nil
+	tx.hash.SetBytes(pbTx.Hash)
+	tx.from = pbTx.From
+	tx.to = pbTx.To
+	tx.value.SetBytes(pbTx.Value)
+	tx.nonce = pbTx.Nonce
+	tx.timestamp = pbTx.Timestamp
+	return nil
 }
 
 func (tx *TxImpl) String() string {
