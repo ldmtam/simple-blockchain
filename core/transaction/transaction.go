@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/simpleblockchain/account"
 	"github.com/simpleblockchain/common"
 	"github.com/simpleblockchain/core/pb"
@@ -15,6 +16,7 @@ import (
 var (
 	errTxInvalidArgument         = errors.New("invalid argument when creating tx")
 	errInvalidProtoToTransaction = errors.New("protobuf message cannot be converted into Transaction")
+	errInvalidTransactionToProto = errors.New("transaction cannot be converted to protobuf message")
 )
 
 // TxImpl struct of a transaction
@@ -75,13 +77,18 @@ func (tx *TxImpl) Timestamp() int64 {
 	return tx.timestamp
 }
 
+// Signature returns signature of the tx.
+func (tx *TxImpl) Signature() []byte {
+	return tx.signature
+}
+
 // Hash returns hash of transaction.
 func (tx *TxImpl) Hash() common.Hash {
 	return tx.hash
 }
 
 // Marshal encodes tx using protobuf
-func (tx *TxImpl) Marshal() (string, error) {
+func (tx *TxImpl) Marshal() ([]byte, error) {
 	txHash := tx.hash.CloneBytes()
 	txValue := tx.value.Bytes()
 
@@ -94,19 +101,25 @@ func (tx *TxImpl) Marshal() (string, error) {
 		Timestamp: tx.timestamp,
 	}
 
-	return pbTx.String(), nil
+	serializedData, err := proto.Marshal(pbTx)
+	if err != nil {
+		return nil, errInvalidTransactionToProto
+	}
+	return serializedData, nil
 }
 
 // Unmarshal decode tx using protobuf
-func (tx *TxImpl) Unmarshal(data string) error {
+func (tx *TxImpl) Unmarshal(data []byte) error {
 	pbTx := &pb.Transaction{}
-	err := pbTx.XXX_Unmarshal([]byte(data))
+	err := proto.Unmarshal(data, pbTx)
 	if err != nil {
 		return errInvalidProtoToTransaction
 	}
 	tx.hash.SetBytes(pbTx.Hash)
 	tx.from = pbTx.From
 	tx.to = pbTx.To
+	// notice: we have to initialize tx.value before pointing to it.
+	tx.value = new(big.Int)
 	tx.value.SetBytes(pbTx.Value)
 	tx.nonce = pbTx.Nonce
 	tx.timestamp = pbTx.Timestamp
