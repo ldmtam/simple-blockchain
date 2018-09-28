@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -13,10 +14,16 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/simpleblockchain/abstraction"
 	"github.com/simpleblockchain/account"
 	"github.com/simpleblockchain/core/transaction"
 	log "github.com/sirupsen/logrus"
 )
+
+func renderErrorMessage(err error, w http.ResponseWriter) {
+	d := map[string]string{"error": err.Error()}
+	json.NewEncoder(w).Encode(d)
+}
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -34,6 +41,9 @@ func generateKeypairHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("Cannot generate ed25519 keypair")
+
+		renderErrorMessage(err, w)
+		return
 	}
 	privKey := hex.EncodeToString(privKeyBytes)
 	pubKey := hex.EncodeToString(pubKeyBytes)
@@ -44,18 +54,6 @@ func generateKeypairHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(kp)
-}
-
-func sendRawTxHandler(w http.ResponseWriter, r *http.Request) {
-	type sendRawTx struct {
-		Signature string `json:"signature"`
-	}
-
-	data := new(sendRawTx)
-	b, _ := ioutil.ReadAll(r.Body)
-	json.Unmarshal(b, &data)
-
-	fmt.Println("signature: ", data.Signature)
 }
 
 func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
@@ -70,30 +68,63 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &data)
 
-	txFrom, err := hex.DecodeString(data.From)
+	if data.From == data.To {
+		errString := `from and to address must not be the same`
+		log.WithFields(log.Fields{
+			"error": errString,
+		}).Error("addresses are the same")
+
+		renderErrorMessage(errors.New(errString), w)
+		return
+	}
+
+	from := &account.KeyPairImpl{}
+	to := &account.KeyPairImpl{}
+
+	err := from.DecodePublicKey(data.From)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("can not decode `from` field")
+
+		renderErrorMessage(err, w)
+		return
 	}
-	txTo, err := hex.DecodeString(data.To)
+
+	err = to.DecodePublicKey(data.To)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("cannot decode `to` field")
+
+		renderErrorMessage(err, w)
+		return
 	}
+
 	txValue, err := strconv.Atoi(data.Value)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("cannot convert `value` to int")
+
+		renderErrorMessage(err, w)
+		return
 	}
+
 	txNonce, err := strconv.Atoi(data.Nonce)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("cannot convert `nonce` to int")
+
+		renderErrorMessage(err, w)
+		return
 	}
+
+	txFrom := make([]byte, ed25519.PublicKeySize)
+	copy(txFrom, from.PublicKey[:])
+	txTo := make([]byte, ed25519.PublicKeySize)
+	copy(txTo, to.PublicKey[:])
 
 	tx, err := transaction.NewTransaction(
 		txFrom,
@@ -106,6 +137,9 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("cannot create new raw transaction")
+
+		renderErrorMessage(err, w)
+		return
 	}
 
 	txHashInHash := tx.Hash()
@@ -123,10 +157,13 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error("cannot encode transaction")
+		}).Error("cannot encode transaction with protobuf")
+
+		renderErrorMessage(err, w)
+		return
 	}
 
-	d := map[string]string{"tx_hash": hex.EncodeToString(pbMess)}
+	d := map[string]string{"raw_tx": hex.EncodeToString(pbMess)}
 	json.NewEncoder(w).Encode(d)
 }
 
@@ -151,24 +188,31 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("cannot convert tx hex string to bytes")
+
+		renderErrorMessage(err, w)
+		return
 	}
 
 	err = tx.Unmarshal(rawTxBytes)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error("cannot decode transaction")
+		}).Error("cannot decode transaction with protobuf")
+
+		renderErrorMessage(err, w)
+		return
 	}
 
-	privKeyBytes, err := hex.DecodeString(data.PrivateKey)
+	kp := &account.KeyPairImpl{}
+
+	err = kp.DecodePrivateKey(data.PrivateKey)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("cannot decode private key hex string to bytes")
-	}
 
-	kp := &account.KeyPairImpl{
-		PrivateKey: ed25519.PrivateKey(privKeyBytes),
+		renderErrorMessage(err, w)
+		return
 	}
 
 	tx.Sign(kp)
@@ -177,15 +221,60 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		"Signature": hex.EncodeToString(tx.Signature()),
 	}).Info("Signature of the message")
 
-	// pubKeyBytes, err := hex.DecodeString(data.PublicKey)
-	// if err != nil {
-	// 	log.WithFields(log.Fields{
-	// 		"error": err,
-	// 	}).Error("cannot decode public key hex string to bytes")
-	// }
+	txBytes, err := tx.Marshal()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("cannot encode tx with protobuf")
 
-	// isVerified := tx.Verify(pubKeyBytes)
-	// fmt.Println(isVerified)
-	d := map[string]string{"signature": hex.EncodeToString(tx.Signature())}
+		renderErrorMessage(err, w)
+		return
+	}
+
+	d := map[string]string{"raw_tx": hex.EncodeToString(txBytes)}
+	json.NewEncoder(w).Encode(d)
+}
+
+func sendRawTxHandler(w http.ResponseWriter, r *http.Request, txPool abstraction.TxPool) {
+	type sendRawTx struct {
+		RawTx string `json:"raw_tx"`
+	}
+
+	data := new(sendRawTx)
+	b, _ := ioutil.ReadAll(r.Body)
+	json.Unmarshal(b, &data)
+
+	txBytes, err := hex.DecodeString(data.RawTx)
+	if err != nil {
+		renderErrorMessage(err, w)
+		return
+	}
+	tx := &transaction.TxImpl{}
+	tx.Unmarshal(txBytes)
+
+	txHashInHash := tx.Hash()
+	txHashInBytes := txHashInHash.CloneBytes()
+
+	log.WithFields(log.Fields{
+		"Hash":      hex.EncodeToString(txHashInBytes),
+		"From":      hex.EncodeToString(tx.From()),
+		"To":        hex.EncodeToString(tx.To()),
+		"Value":     tx.Value(),
+		"Nonce":     tx.Nonce(),
+		"Timestamp": tx.Timestamp(),
+		"Signature": hex.EncodeToString(tx.Signature()),
+	}).Info("Info of raw tx")
+
+	err = txPool.AddTx(tx)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("cannot add tx to tx pool")
+
+		renderErrorMessage(err, w)
+		return
+	}
+
+	d := map[string]string{"result": "success"}
 	json.NewEncoder(w).Encode(d)
 }

@@ -9,9 +9,16 @@ import (
 )
 
 var (
-	errGenerateKeyFailed = errors.New("error: generate key failed")
-	errSignFailed        = errors.New("error: sign failed")
-	errDecodeFailed      = errors.New("error: decode failed")
+	errGenerateKeyFailed = errors.New("cannot generate key pair")
+	errSignFailed        = errors.New("cannot sign message")
+
+	errInvalidPrivateKeyHexString = errors.New("invalid private key hex string")
+	errInvalidPublicKeyHexString  = errors.New("invalid public key hex string")
+	errInvalidPrivateKeyLength    = errors.New("invalid private key length")
+	errInvalidPublicKeyLength     = errors.New("invalid public key length")
+
+	errInvalidPublicKey  = errors.New("invalid public key format")
+	errInvalidPrivateKey = errors.New("invalid private key format")
 )
 
 // KeyPairImpl ...
@@ -42,24 +49,43 @@ func (kp *KeyPairImpl) Verify(sig, message []byte) bool {
 	return ed25519.Verify(kp.PublicKey, message, sig)
 }
 
-// Encode encodes keypair from []byte to hex string
-func (kp *KeyPairImpl) Encode() (string, string) {
-	return hex.EncodeToString(kp.PrivateKey), hex.EncodeToString(kp.PublicKey)
+// EncodePrivateKey encode private key to string
+func (kp *KeyPairImpl) EncodePrivateKey() string {
+	return hex.EncodeToString(kp.PrivateKey)
 }
 
-// Decode decodes keypair from hex string to []byte
-func (kp *KeyPairImpl) Decode(privKey, pubKey string) error {
+// EncodePublicKey encode public key to string
+func (kp *KeyPairImpl) EncodePublicKey() string {
+	return hex.EncodeToString(kp.PublicKey)
+}
+
+// DecodePrivateKey decode private key hex string
+func (kp *KeyPairImpl) DecodePrivateKey(privKey string) error {
 	privKeyBytes, err := hex.DecodeString(privKey)
 	if err != nil {
-		return errDecodeFailed
+		return errInvalidPrivateKeyHexString
 	}
 
-	pubKeyBytes, err := hex.DecodeString(pubKey)
-	if err != nil {
-		return errDecodeFailed
+	if len(privKeyBytes) != ed25519.PrivateKeySize {
+		return errInvalidPrivateKeyLength
 	}
 
 	kp.PrivateKey = ed25519.PrivateKey(privKeyBytes)
+
+	return nil
+}
+
+// DecodePublicKey decode public key hex string
+func (kp *KeyPairImpl) DecodePublicKey(pubKey string) error {
+	pubKeyBytes, err := hex.DecodeString(pubKey)
+	if err != nil {
+		return errInvalidPublicKeyHexString
+	}
+
+	if len(pubKeyBytes) != ed25519.PublicKeySize {
+		return errInvalidPublicKeyLength
+	}
+
 	kp.PublicKey = ed25519.PublicKey(pubKeyBytes)
 
 	return nil

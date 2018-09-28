@@ -1,22 +1,26 @@
 package transaction
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/simpleblockchain/abstraction"
 	"github.com/simpleblockchain/account"
 	"github.com/simpleblockchain/common"
-	"github.com/simpleblockchain/core/pb"
 	"github.com/simpleblockchain/crypto/sha3"
+	"github.com/simpleblockchain/proto"
 	"golang.org/x/crypto/ed25519"
 )
 
 var (
-	errTxInvalidArgument         = errors.New("invalid argument when creating tx")
-	errInvalidProtoToTransaction = errors.New("protobuf message cannot be converted into Transaction")
-	errInvalidTransactionToProto = errors.New("transaction cannot be converted to protobuf message")
+	errTxInvalidArgument           = errors.New("invalid argument when creating tx")
+	errInvalidProtoToTransaction   = errors.New("protobuf message cannot be converted into Transaction")
+	errInvalidTransactionToProto   = errors.New("transaction cannot be converted to protobuf message")
+	errInvalidTransacionHash       = errors.New("invalid transaction hash")
+	errInvalidTransactionSignature = errors.New("invalid transaction signature")
 )
 
 // TxImpl struct of a transaction
@@ -92,13 +96,14 @@ func (tx *TxImpl) Marshal() ([]byte, error) {
 	txHash := tx.hash.CloneBytes()
 	txValue := tx.value.Bytes()
 
-	pbTx := &pb.Transaction{
+	pbTx := &corepb.Transaction{
 		Hash:      txHash,
 		From:      tx.from,
 		To:        tx.to,
 		Value:     txValue,
 		Nonce:     tx.nonce,
 		Timestamp: tx.timestamp,
+		Signature: tx.signature,
 	}
 
 	serializedData, err := proto.Marshal(pbTx)
@@ -110,7 +115,7 @@ func (tx *TxImpl) Marshal() ([]byte, error) {
 
 // Unmarshal decode tx using protobuf
 func (tx *TxImpl) Unmarshal(data []byte) error {
-	pbTx := &pb.Transaction{}
+	pbTx := &corepb.Transaction{}
 	err := proto.Unmarshal(data, pbTx)
 	if err != nil {
 		return errInvalidProtoToTransaction
@@ -123,14 +128,15 @@ func (tx *TxImpl) Unmarshal(data []byte) error {
 	tx.value.SetBytes(pbTx.Value)
 	tx.nonce = pbTx.Nonce
 	tx.timestamp = pbTx.Timestamp
+	tx.signature = pbTx.Signature
 	return nil
 }
 
 func (tx *TxImpl) String() string {
 	return fmt.Sprintf(`{"hash":"%s", "from":"%s", "to":"%s", "nonce":"%v", "value":"%s", "timestamp":"%v"}`,
 		tx.hash.String(),
-		tx.from,
-		tx.to,
+		hex.EncodeToString(tx.from),
+		hex.EncodeToString(tx.to),
 		tx.nonce,
 		tx.value,
 		tx.timestamp,
@@ -138,7 +144,7 @@ func (tx *TxImpl) String() string {
 }
 
 // Sign signs the tx
-func (tx *TxImpl) Sign(kp account.KeyPair) {
+func (tx *TxImpl) Sign(kp abstraction.KeyPair) {
 	sig := kp.Sign(tx.hash.CloneBytes())
 	tx.signature = sig
 }
@@ -167,4 +173,23 @@ func (tx *TxImpl) calcHash() (common.Hash, error) {
 	h.SetBytes(hasher.Sum(nil))
 
 	return h, nil
+}
+
+// VerifyIntegrity verifies transaction information
+func (tx *TxImpl) VerifyIntegrity() error {
+	// verify tx hash
+	wantedHash, err := tx.calcHash()
+	if err != nil {
+		return err
+	}
+	if wantedHash.Equals(&tx.hash) == false {
+		return errInvalidTransacionHash
+	}
+
+	// verify signature
+	if isValidSignature := tx.Verify(tx.From()); isValidSignature == false {
+		return errInvalidTransactionSignature
+	}
+
+	return nil
 }

@@ -93,7 +93,9 @@ func TestSignTx(t *testing.T) {
 	tx := createTx()
 
 	fromKp := &account.KeyPairImpl{}
-	err := fromKp.Decode(fromPrivKey, fromPubKey)
+	err := fromKp.DecodePrivateKey(fromPrivKey)
+	assert.Nil(t, err)
+	err = fromKp.DecodePublicKey(fromPubKey)
 	assert.Nil(t, err)
 
 	tx.Sign(fromKp)
@@ -101,7 +103,8 @@ func TestSignTx(t *testing.T) {
 	assert.NotNil(t, tx.signature)
 
 	toKp := &account.KeyPairImpl{}
-	err = toKp.Decode(toPrivKey, toPubKey)
+	err = toKp.DecodePrivateKey(toPrivKey)
 	assert.Nil(t, err)
-
+	err = toKp.DecodePublicKey(toPubKey)
+	assert.Nil(t, err)
 }

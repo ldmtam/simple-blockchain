@@ -5,16 +5,24 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/simpleblockchain/abstraction"
+	"github.com/simpleblockchain/core/txpool"
 	"github.com/simpleblockchain/rpc"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+	var txp abstraction.TxPool
+	txp = txpool.NewTxPImpl()
+	txp.Start()
+
 	rpc := rpc.NewJSONServer("0.0.0.0", "3000")
-	rpc.Start()
+	rpc.Start(txp)
 
 	waitExit()
+
 	rpc.Stop()
+	txp.Stop()
 }
 
 func waitExit() {

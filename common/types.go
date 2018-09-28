@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 )
 
@@ -48,6 +49,13 @@ func (hash *Hash) SetBytes(newHash []byte) {
 // String returns hash a as hex string
 func (hash *Hash) String() string {
 	return hex.EncodeToString(hash[:])
+}
+
+// Equals compare two Hash. True is equal, otherwise false/
+func (hash *Hash) Equals(b *Hash) bool {
+	h1 := hash.CloneBytes()
+	h2 := b.CloneBytes()
+	return bytes.Compare(h1, h2) == 0
 }
 
 // Equal checks whether byte slice a and b are equal.

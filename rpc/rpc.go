@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/simpleblockchain/abstraction"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,15 +34,21 @@ func NewJSONServer(endPoint, port string) *JSONServer {
 }
 
 // Start the server
-func (j *JSONServer) Start() {
+func (j *JSONServer) Start(txPool abstraction.TxPool) {
 	go func() {
 		r := mux.NewRouter()
 
 		r.HandleFunc("/", homeHandler).Methods("GET")
+
 		r.HandleFunc("/generatekeypair", generateKeypairHandler).Methods("POST")
-		r.HandleFunc("/sendrawtx", sendRawTxHandler).Methods("POST")
+
 		r.HandleFunc("/createrawtx", createRawTxHandler).Methods("POST")
+
 		r.HandleFunc("/signrawtx", signRawTxHandler).Methods("POST")
+
+		r.HandleFunc("/sendrawtx", func(w http.ResponseWriter, r *http.Request) {
+			sendRawTxHandler(w, r, txPool)
+		}).Methods("POST")
 
 		j.srv = &http.Server{
 			Addr:    j.port,

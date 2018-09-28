@@ -1,5 +1,5 @@
 syntax = "proto3";
-package pb;
+package corepb;
 
 message Transaction {
     bytes hash = 1;
@@ -9,4 +9,10 @@ message Transaction {
     uint64 nonce = 5;
     int64 timestamp = 6;
     bytes signature = 7;
+}
+
+message Account {
+    bytes address = 1;
+    bytes balance = 2;
+    uint64 nonce = 3;
 }

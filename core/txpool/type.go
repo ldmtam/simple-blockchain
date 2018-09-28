@@ -1,11 +1,18 @@
 package txpool
 
 import (
+	"errors"
 	"sync"
 
 	avl "github.com/emirpasic/gods/trees/avltree"
 	"github.com/simpleblockchain/common"
 	"github.com/simpleblockchain/core/transaction"
+)
+
+var (
+	errInsufficientBalance   = errors.New("insufficient balance")
+	errSmallTransactionNonce = errors.New("cannot accept a transaction with smaller nonce")
+	errLargeTransactionNonce = errors.New("cannot accept a transaction with bigger nonce")
 )
 
 type sortedTxMap struct {
