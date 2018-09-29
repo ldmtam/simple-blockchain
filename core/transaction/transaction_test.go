@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ldmtam/simpleblockchain/account"
+	"github.com/ldmtam/tam-chain/account"
 	"github.com/stretchr/testify/assert"
 )
 

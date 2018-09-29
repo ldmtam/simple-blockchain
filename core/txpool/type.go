@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	avl "github.com/emirpasic/gods/trees/avltree"
-	"github.com/ldmtam/simpleblockchain/common"
-	"github.com/ldmtam/simpleblockchain/core/transaction"
+	"github.com/ldmtam/tam-chain/common"
+	"github.com/ldmtam/tam-chain/core/transaction"
 )
 
 var (

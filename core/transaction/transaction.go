@@ -7,11 +7,11 @@ import (
 	"math/big"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/ldmtam/simpleblockchain/abstraction"
-	"github.com/ldmtam/simpleblockchain/account"
-	"github.com/ldmtam/simpleblockchain/common"
-	"github.com/ldmtam/simpleblockchain/crypto/sha3"
-	"github.com/ldmtam/simpleblockchain/proto"
+	"github.com/ldmtam/tam-chain/abstraction"
+	"github.com/ldmtam/tam-chain/account"
+	"github.com/ldmtam/tam-chain/common"
+	"github.com/ldmtam/tam-chain/crypto/sha3"
+	"github.com/ldmtam/tam-chain/proto"
 	"golang.org/x/crypto/ed25519"
 )
 

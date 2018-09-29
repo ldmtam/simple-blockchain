@@ -1,7 +1,7 @@
 package txpool
 
 import (
-	"github.com/ldmtam/simpleblockchain/abstraction"
+	"github.com/ldmtam/tam-chain/abstraction"
 	log "github.com/sirupsen/logrus"
 )
 
