@@ -5,10 +5,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	log "github.com/inconshreveable/log15"
 	"github.com/ldmtam/tam-chain/abstraction"
 	"github.com/ldmtam/tam-chain/core/txpool"
 	"github.com/ldmtam/tam-chain/rpc"
-	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -29,7 +29,5 @@ func waitExit() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	i := <-c
-	log.WithFields(log.Fields{
-		"signal": i,
-	}).Info("Server received interrupt, shutting down...")
+	log.Info("Server received interrupt, shutting down...", "signal", i)
 }

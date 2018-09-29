@@ -14,10 +14,10 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	log "github.com/inconshreveable/log15"
 	"github.com/ldmtam/tam-chain/abstraction"
 	"github.com/ldmtam/tam-chain/account"
 	"github.com/ldmtam/tam-chain/core/transaction"
-	log "github.com/sirupsen/logrus"
 )
 
 func renderErrorMessage(err error, w http.ResponseWriter) {
@@ -38,9 +38,7 @@ func generateKeypairHandler(w http.ResponseWriter, r *http.Request) {
 
 	pubKeyBytes, privKeyBytes, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("Cannot generate ed25519 keypair")
+		log.Error("Cannot generate ed25519 keypair", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -70,9 +68,7 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	if data.From == data.To {
 		errString := `from and to address must not be the same`
-		log.WithFields(log.Fields{
-			"error": errString,
-		}).Error("addresses are the same")
+		log.Error("addresses are the same", "error", errString)
 
 		renderErrorMessage(errors.New(errString), w)
 		return
@@ -83,9 +79,7 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := from.DecodePublicKey(data.From)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("can not decode `from` field")
+		log.Error("can not decode `from` field", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -93,9 +87,7 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = to.DecodePublicKey(data.To)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot decode `to` field")
+		log.Error("cannot decode `to` field", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -103,9 +95,7 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	txValue, err := strconv.Atoi(data.Value)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot convert `value` to int")
+		log.Error("cannot convert `value` to int", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -113,9 +103,7 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	txNonce, err := strconv.Atoi(data.Nonce)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot convert `nonce` to int")
+		log.Error("cannot convert `nonce` to int", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -134,30 +122,15 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		time.Now().Unix(),
 	)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot create new raw transaction")
+		log.Error("cannot create new raw transaction", "error", err)
 
 		renderErrorMessage(err, w)
 		return
 	}
 
-	txHashInHash := tx.Hash()
-	txHashInBytes := txHashInHash.CloneBytes()
-
-	log.WithFields(log.Fields{
-		"from":  data.From,
-		"to":    data.To,
-		"nonce": txNonce,
-		"value": data.Value,
-		"hash":  hex.EncodeToString(txHashInBytes),
-	}).Info("Transaction data")
-
 	pbMess, err := tx.Marshal()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot encode transaction with protobuf")
+		log.Error("cannot encode transaction with protobuf", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -177,17 +150,10 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &data)
 
-	log.WithFields(log.Fields{
-		"Private key": data.PrivateKey,
-		"Raw Tx":      data.RawTx,
-	}).Info("Value received from sign raw tx")
-
 	tx := new(transaction.TxImpl)
 	rawTxBytes, err := hex.DecodeString(data.RawTx)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot convert tx hex string to bytes")
+		log.Error("cannot convert tx hex string to bytes", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -195,9 +161,7 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = tx.Unmarshal(rawTxBytes)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot decode transaction with protobuf")
+		log.Error("cannot decode transaction with protobuf", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -207,9 +171,7 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = kp.DecodePrivateKey(data.PrivateKey)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot decode private key hex string to bytes")
+		log.Error("cannot decode private key hex string to bytes", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -217,15 +179,9 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	tx.Sign(kp)
 
-	log.WithFields(log.Fields{
-		"Signature": hex.EncodeToString(tx.Signature()),
-	}).Info("Signature of the message")
-
 	txBytes, err := tx.Marshal()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot encode tx with protobuf")
+		log.Error("cannot encode tx with protobuf", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -252,24 +208,9 @@ func sendRawTxHandler(w http.ResponseWriter, r *http.Request, txPool abstraction
 	tx := &transaction.TxImpl{}
 	tx.Unmarshal(txBytes)
 
-	txHashInHash := tx.Hash()
-	txHashInBytes := txHashInHash.CloneBytes()
-
-	log.WithFields(log.Fields{
-		"Hash":      hex.EncodeToString(txHashInBytes),
-		"From":      hex.EncodeToString(tx.From()),
-		"To":        hex.EncodeToString(tx.To()),
-		"Value":     tx.Value(),
-		"Nonce":     tx.Nonce(),
-		"Timestamp": tx.Timestamp(),
-		"Signature": hex.EncodeToString(tx.Signature()),
-	}).Info("Info of raw tx")
-
 	err = txPool.AddTx(tx)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("cannot add tx to tx pool")
+		log.Error("cannot add tx to tx pool", "error", err)
 
 		renderErrorMessage(err, w)
 		return

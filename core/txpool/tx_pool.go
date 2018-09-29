@@ -1,8 +1,8 @@
 package txpool
 
 import (
+	log "github.com/inconshreveable/log15"
 	"github.com/ldmtam/tam-chain/abstraction"
-	log "github.com/sirupsen/logrus"
 )
 
 // TxPImpl ...

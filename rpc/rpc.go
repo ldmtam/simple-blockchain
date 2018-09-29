@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	log "github.com/inconshreveable/log15"
 	"github.com/ldmtam/tam-chain/abstraction"
-	log "github.com/sirupsen/logrus"
 )
 
 // JSONServer json based api rpc server.
@@ -57,16 +57,14 @@ func (j *JSONServer) Start(txPool abstraction.TxPool) {
 
 		j.srv.ListenAndServe()
 	}()
-	log.Info("JSON RPC server started.")
+	log.Info("JSON RPC server started")
 }
 
 // Stop the server
 func (j *JSONServer) Stop() {
 	err := j.srv.Shutdown(context.Background())
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("JSON RPC shutdown failed.")
+		log.Error("JSON RPC shutdown failed.", "error", err)
 	}
-	log.Info("JSON RPC server stopped")
+	log.Info("JSON RPC server stop.")
 }
