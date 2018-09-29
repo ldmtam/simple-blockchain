@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/simpleblockchain/common"
-	"github.com/simpleblockchain/proto"
+	"github.com/ldmtam/simpleblockchain/common"
+	"github.com/ldmtam/simpleblockchain/proto"
 )
 
 // Errors

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/simpleblockchain/abstraction"
+	"github.com/ldmtam/simpleblockchain/abstraction"
 	log "github.com/sirupsen/logrus"
 )
 

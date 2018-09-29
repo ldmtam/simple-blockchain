@@ -14,9 +14,9 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
-	"github.com/simpleblockchain/abstraction"
-	"github.com/simpleblockchain/account"
-	"github.com/simpleblockchain/core/transaction"
+	"github.com/ldmta/simpleblockchain/core/transaction"
+	"github.com/ldmtam/simpleblockchain/abstraction"
+	"github.com/ldmtam/simpleblockchain/account"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -3,7 +3,7 @@ package abstraction
 import (
 	"math/big"
 
-	"github.com/simpleblockchain/common"
+	"github.com/ldmtam/simpleblockchain/common"
 )
 
 // Account interface

@@ -5,9 +5,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/simpleblockchain/abstraction"
-	"github.com/simpleblockchain/core/txpool"
-	"github.com/simpleblockchain/rpc"
+	"github.com/ldmtam/simpleblockchain/abstraction"
+	"github.com/ldmtam/simpleblockchain/core/txpool"
+	"github.com/ldmtam/simpleblockchain/rpc"
 	log "github.com/sirupsen/logrus"
 )
 
