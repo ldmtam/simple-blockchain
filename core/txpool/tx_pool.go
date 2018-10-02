@@ -3,11 +3,12 @@ package txpool
 import (
 	log "github.com/inconshreveable/log15"
 	"github.com/ldmtam/tam-chain/abstraction"
+	"github.com/ldmtam/tam-chain/common"
 )
 
 // TxPImpl ...
 type TxPImpl struct {
-	pendingTx *sortedTxMap
+	all *txLookup
 
 	quitCh chan struct{}
 }
@@ -15,8 +16,7 @@ type TxPImpl struct {
 // NewTxPImpl returns a new TxPImpl instance.
 func NewTxPImpl() *TxPImpl {
 	return &TxPImpl{
-		pendingTx: newSortedTxMap(),
-		quitCh:    make(chan struct{}),
+		all: newTxLookup(),
 	}
 }
 
@@ -57,5 +57,12 @@ func (pool *TxPImpl) AddTx(tx abstraction.Transaction) error {
 		return err
 	}
 
+	pool.all.Add(tx)
+
 	return nil
+}
+
+// DelTx remove a tx from the tx pool.
+func (pool *TxPImpl) DelTx(hash common.Hash) {
+	pool.all.Remove(hash)
 }
