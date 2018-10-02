@@ -17,6 +17,7 @@ import (
 	log "github.com/inconshreveable/log15"
 	"github.com/ldmtam/tam-chain/abstraction"
 	"github.com/ldmtam/tam-chain/account"
+	"github.com/ldmtam/tam-chain/common"
 	"github.com/ldmtam/tam-chain/core/transaction"
 )
 
@@ -109,10 +110,10 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	txFrom := make([]byte, ed25519.PublicKeySize)
-	copy(txFrom, from.PublicKey[:])
-	txTo := make([]byte, ed25519.PublicKeySize)
-	copy(txTo, to.PublicKey[:])
+	var txFrom common.Address
+	copy(txFrom[:], from.PublicKey)
+	var txTo common.Address
+	copy(txTo[:], to.PublicKey)
 
 	tx, err := transaction.NewTransaction(
 		txFrom,

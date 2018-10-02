@@ -8,27 +8,13 @@ import (
 const (
 	// HashLength length of hash
 	HashLength = 32
+
+	// AddressLength of address
+	AddressLength = 32
 )
 
 // Hash is hash of data
 type Hash [HashLength]byte
-
-// FromHex convert string to bytes
-func FromHex(s string) []byte {
-	if len(s) > 1 {
-		// if hex string contains "0x" or "0X", trim those characters
-		if s[0:2] == "0x" || s[0:2] == "0X" {
-			s = s[2:]
-		}
-	}
-	// prepend 0 to odd hex string to make it even
-	if len(s)%2 == 1 {
-		s = "0" + s
-	}
-
-	h, _ := hex.DecodeString(s)
-	return h
-}
 
 // CloneBytes returns a copy of the bytes which represent the hash as a byte
 func (hash *Hash) CloneBytes() []byte {
@@ -69,4 +55,33 @@ func Equal(a, b []byte) bool {
 		}
 	}
 	return true
+}
+
+// Address ..
+type Address [AddressLength]byte
+
+// CloneBytes ...
+func (a Address) CloneBytes() []byte {
+	b := make([]byte, AddressLength)
+	copy(b, a[:])
+	return b
+}
+
+// SetBytes ...
+func (a *Address) SetBytes(b []byte) {
+	if len(b) > len(a) {
+		b = b[len(b)-AddressLength:]
+	}
+	copy(a[AddressLength-len(b):], b)
+}
+
+func (a Address) String() string {
+	return hex.EncodeToString(a[:])
+}
+
+// Equals ...
+func (a Address) Equals(b Address) bool {
+	a1 := a.CloneBytes()
+	a2 := b.CloneBytes()
+	return Equal(a1, a2)
 }

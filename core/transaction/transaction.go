@@ -26,8 +26,8 @@ var (
 // TxImpl struct of a transaction
 type TxImpl struct {
 	hash      common.Hash
-	from      []byte
-	to        []byte
+	from      common.Address
+	to        common.Address
 	value     *big.Int
 	nonce     uint64
 	timestamp int64
@@ -36,8 +36,8 @@ type TxImpl struct {
 }
 
 // NewTransaction returns new transaction
-func NewTransaction(from, to []byte, value *big.Int, nonce uint64, timestamp int64) (*TxImpl, error) {
-	if from == nil || to == nil || value == nil {
+func NewTransaction(from, to common.Address, value *big.Int, nonce uint64, timestamp int64) (*TxImpl, error) {
+	if from.CloneBytes() == nil || to.CloneBytes() == nil || value == nil {
 		return nil, errTxInvalidArgument
 	}
 
@@ -58,12 +58,12 @@ func NewTransaction(from, to []byte, value *big.Int, nonce uint64, timestamp int
 
 // From returns `from` address.
 func (tx *TxImpl) From() []byte {
-	return tx.from
+	return tx.from.CloneBytes()
 }
 
 // To returns `to` address.
 func (tx *TxImpl) To() []byte {
-	return tx.to
+	return tx.to.CloneBytes()
 }
 
 // Value returns tx value
@@ -93,13 +93,15 @@ func (tx *TxImpl) Hash() common.Hash {
 
 // Marshal encodes tx using protobuf
 func (tx *TxImpl) Marshal() ([]byte, error) {
+	txFrom := tx.from.CloneBytes()
+	txTo := tx.to.CloneBytes()
 	txHash := tx.hash.CloneBytes()
 	txValue := tx.value.Bytes()
 
 	pbTx := &corepb.Transaction{
 		Hash:      txHash,
-		From:      tx.from,
-		To:        tx.to,
+		From:      txFrom,
+		To:        txTo,
 		Value:     txValue,
 		Nonce:     tx.nonce,
 		Timestamp: tx.timestamp,
@@ -121,8 +123,8 @@ func (tx *TxImpl) Unmarshal(data []byte) error {
 		return errInvalidProtoToTransaction
 	}
 	tx.hash.SetBytes(pbTx.Hash)
-	tx.from = pbTx.From
-	tx.to = pbTx.To
+	tx.from.SetBytes(pbTx.From)
+	tx.to.SetBytes(pbTx.To)
 	// notice: we have to initialize tx.value before pointing to it.
 	tx.value = new(big.Int)
 	tx.value.SetBytes(pbTx.Value)
@@ -135,8 +137,8 @@ func (tx *TxImpl) Unmarshal(data []byte) error {
 func (tx *TxImpl) String() string {
 	return fmt.Sprintf(`{"hash":"%s", "from":"%s", "to":"%s", "nonce":"%v", "value":"%s", "timestamp":"%v"}`,
 		tx.hash.String(),
-		hex.EncodeToString(tx.from),
-		hex.EncodeToString(tx.to),
+		hex.EncodeToString(tx.From()),
+		hex.EncodeToString(tx.To()),
 		tx.nonce,
 		tx.value,
 		tx.timestamp,
@@ -163,8 +165,8 @@ func (tx *TxImpl) calcHash() (common.Hash, error) {
 
 	value := tx.value.String()
 
-	hasher.Write(tx.from)
-	hasher.Write(tx.to)
+	hasher.Write(tx.From())
+	hasher.Write(tx.To())
 	hasher.Write([]byte(value))
 	hasher.Write(common.FromUint64(tx.nonce))
 	hasher.Write(common.FromInt64(tx.timestamp))
