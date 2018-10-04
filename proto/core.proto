@@ -3,12 +3,14 @@ package corepb;
 
 message Transaction {
     bytes hash = 1;
-    bytes from = 2;
-    bytes to = 3;
-    bytes value = 4;
-    uint64 nonce = 5;
-    int64 timestamp = 6;
-    bytes signature = 7;
+    uint32 chainid = 2;
+    bytes from = 3;
+    bytes to = 4;
+    bytes value = 5;
+    bytes fee = 6;
+    uint64 nonce = 7;
+    int64 timestamp = 8;
+    bytes signature = 9;
 }
 
 message Account {

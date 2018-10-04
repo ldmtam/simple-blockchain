@@ -26,9 +26,11 @@ var (
 // TxImpl struct of a transaction
 type TxImpl struct {
 	hash      common.Hash
+	chainID   uint32
 	from      common.Address
 	to        common.Address
 	value     *big.Int
+	fee       *big.Int
 	nonce     uint64
 	timestamp int64
 
@@ -36,15 +38,17 @@ type TxImpl struct {
 }
 
 // NewTransaction returns new transaction
-func NewTransaction(from, to common.Address, value *big.Int, nonce uint64, timestamp int64) (*TxImpl, error) {
-	if from.CloneBytes() == nil || to.CloneBytes() == nil || value == nil {
+func NewTransaction(chainID uint32, from, to common.Address, value, fee *big.Int, nonce uint64, timestamp int64) (*TxImpl, error) {
+	if chainID == 0 || from.CloneBytes() == nil || to.CloneBytes() == nil || value == nil || fee == nil {
 		return nil, errTxInvalidArgument
 	}
 
 	txImpl := &TxImpl{
+		chainID:   chainID,
 		from:      from,
 		to:        to,
 		value:     value,
+		fee:       fee,
 		nonce:     nonce,
 		timestamp: timestamp,
 	}
@@ -54,6 +58,11 @@ func NewTransaction(from, to common.Address, value *big.Int, nonce uint64, times
 	}
 	txImpl.hash = hash
 	return txImpl, nil
+}
+
+// ChainID returns `chainID`.
+func (tx *TxImpl) ChainID() uint32 {
+	return tx.chainID
 }
 
 // From returns `from` address.
@@ -69,6 +78,11 @@ func (tx *TxImpl) To() []byte {
 // Value returns tx value
 func (tx *TxImpl) Value() *big.Int {
 	return tx.value
+}
+
+// Fee returns tx fee value
+func (tx *TxImpl) Fee() *big.Int {
+	return tx.fee
 }
 
 // Nonce returns tx nonce
@@ -97,12 +111,15 @@ func (tx *TxImpl) Marshal() ([]byte, error) {
 	txTo := tx.to.CloneBytes()
 	txHash := tx.hash.CloneBytes()
 	txValue := tx.value.Bytes()
+	txFee := tx.fee.Bytes()
 
 	pbTx := &corepb.Transaction{
 		Hash:      txHash,
+		Chainid:   tx.chainID,
 		From:      txFrom,
 		To:        txTo,
 		Value:     txValue,
+		Fee:       txFee,
 		Nonce:     tx.nonce,
 		Timestamp: tx.timestamp,
 		Signature: tx.signature,
@@ -123,24 +140,37 @@ func (tx *TxImpl) Unmarshal(data []byte) error {
 		return errInvalidProtoToTransaction
 	}
 	tx.hash.SetBytes(pbTx.Hash)
+
+	tx.chainID = pbTx.Chainid
+
 	tx.from.SetBytes(pbTx.From)
+
 	tx.to.SetBytes(pbTx.To)
+
 	// notice: we have to initialize tx.value before pointing to it.
 	tx.value = new(big.Int)
 	tx.value.SetBytes(pbTx.Value)
+
+	tx.fee = new(big.Int)
+	tx.fee.SetBytes(pbTx.Fee)
+
 	tx.nonce = pbTx.Nonce
+
 	tx.timestamp = pbTx.Timestamp
+
 	tx.signature = pbTx.Signature
 	return nil
 }
 
 func (tx *TxImpl) String() string {
-	return fmt.Sprintf(`{"hash":"%s", "from":"%s", "to":"%s", "nonce":"%v", "value":"%s", "timestamp":"%v"}`,
+	return fmt.Sprintf(`{"hash":"%s", "chain id":"%v", "from":"%s", "to":"%s", "value":"%s", "fee":"%s", "nonce":"%v", "timestamp":"%v"}`,
 		tx.hash.String(),
+		tx.chainID,
 		hex.EncodeToString(tx.From()),
 		hex.EncodeToString(tx.To()),
-		tx.nonce,
 		tx.value,
+		tx.fee,
+		tx.nonce,
 		tx.timestamp,
 	)
 }
@@ -164,10 +194,13 @@ func (tx *TxImpl) calcHash() (common.Hash, error) {
 	hasher := sha3.New256()
 
 	value := tx.value.String()
+	fee := tx.fee.String()
 
+	hasher.Write(common.FromUint32(tx.chainID))
 	hasher.Write(tx.From())
 	hasher.Write(tx.To())
 	hasher.Write([]byte(value))
+	hasher.Write([]byte(fee))
 	hasher.Write(common.FromUint64(tx.nonce))
 	hasher.Write(common.FromInt64(tx.timestamp))
 

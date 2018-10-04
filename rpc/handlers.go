@@ -57,10 +57,12 @@ func generateKeypairHandler(w http.ResponseWriter, r *http.Request) {
 
 func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	type createRawTx struct {
-		From  string `json:"from"`
-		To    string `json:"to"`
-		Value string `json:"value"`
-		Nonce string `json:"nonce"`
+		ChainID string `json:"chainid"`
+		From    string `json:"from"`
+		To      string `json:"to"`
+		Value   string `json:"value"`
+		Fee     string `json:"fee"`
+		Nonce   string `json:"nonce"`
 	}
 
 	data := new(createRawTx)
@@ -94,9 +96,25 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	txChainID, err := strconv.Atoi(data.ChainID)
+	if err != nil {
+		log.Error("cannot convert `chainID` to int", "error", err)
+
+		renderErrorMessage(err, w)
+		return
+	}
+
 	txValue, err := strconv.Atoi(data.Value)
 	if err != nil {
 		log.Error("cannot convert `value` to int", "error", err)
+
+		renderErrorMessage(err, w)
+		return
+	}
+
+	txFee, err := strconv.Atoi(data.Fee)
+	if err != nil {
+		log.Error("cannot convert `fee` to int", "error", err)
 
 		renderErrorMessage(err, w)
 		return
@@ -116,9 +134,11 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	copy(txTo[:], to.PublicKey)
 
 	tx, err := transaction.NewTransaction(
+		uint32(txChainID),
 		txFrom,
 		txTo,
 		big.NewInt(int64(txValue)),
+		big.NewInt(int64(txFee)),
 		uint64(txNonce),
 		time.Now().Unix(),
 	)
@@ -137,14 +157,14 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d := map[string]string{"raw_tx": hex.EncodeToString(pbMess)}
+	d := map[string]string{"unsigned_raw_tx": hex.EncodeToString(pbMess)}
 	json.NewEncoder(w).Encode(d)
 }
 
 func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	type signRawTx struct {
-		PrivateKey string `json:"private_key"`
-		RawTx      string `json:"raw_tx"`
+		PrivateKey    string `json:"private_key"`
+		UnsignedRawTx string `json:"unsigned_raw_tx"`
 	}
 
 	data := new(signRawTx)
@@ -152,7 +172,7 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(b, &data)
 
 	tx := new(transaction.TxImpl)
-	rawTxBytes, err := hex.DecodeString(data.RawTx)
+	rawTxBytes, err := hex.DecodeString(data.UnsignedRawTx)
 	if err != nil {
 		log.Error("cannot convert tx hex string to bytes", "error", err)
 
@@ -209,7 +229,7 @@ func sendRawTxHandler(w http.ResponseWriter, r *http.Request, txPool abstraction
 	tx := &transaction.TxImpl{}
 	tx.Unmarshal(txBytes)
 
-	err = txPool.AddTx(tx)
+	err = txPool.AddTx(tx, true)
 	if err != nil {
 		log.Error("cannot add tx to tx pool", "error", err)
 

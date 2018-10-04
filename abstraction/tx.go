@@ -1,6 +1,10 @@
 package abstraction
 
-import "github.com/ldmtam/tam-chain/common"
+import (
+	"math/big"
+
+	"github.com/ldmtam/tam-chain/common"
+)
 
 // Transaction interface
 type Transaction interface {
@@ -11,4 +15,6 @@ type Transaction interface {
 	Hash() common.Hash
 	Timestamp() int64
 	Nonce() uint64
+	Fee() *big.Int
+	ChainID() uint32
 }
