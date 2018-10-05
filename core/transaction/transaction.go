@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -12,6 +11,7 @@ import (
 	"github.com/ldmtam/tam-chain/common"
 	"github.com/ldmtam/tam-chain/crypto/sha3"
 	"github.com/ldmtam/tam-chain/proto"
+	"github.com/mr-tron/base58/base58"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -166,8 +166,8 @@ func (tx *TxImpl) String() string {
 	return fmt.Sprintf(`{"hash":"%s", "chain id":"%v", "from":"%s", "to":"%s", "value":"%s", "fee":"%s", "nonce":"%v", "timestamp":"%v"}`,
 		tx.hash.String(),
 		tx.chainID,
-		hex.EncodeToString(tx.From()),
-		hex.EncodeToString(tx.To()),
+		base58.Encode(tx.From()),
+		base58.Encode(tx.To()),
 		tx.value,
 		tx.fee,
 		tx.nonce,

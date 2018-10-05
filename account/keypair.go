@@ -2,9 +2,9 @@ package account
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"errors"
 
+	"github.com/mr-tron/base58/base58"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -12,10 +12,10 @@ var (
 	errGenerateKeyFailed = errors.New("cannot generate key pair")
 	errSignFailed        = errors.New("cannot sign message")
 
-	errInvalidPrivateKeyHexString = errors.New("invalid private key hex string")
-	errInvalidPublicKeyHexString  = errors.New("invalid public key hex string")
-	errInvalidPrivateKeyLength    = errors.New("invalid private key length")
-	errInvalidPublicKeyLength     = errors.New("invalid public key length")
+	errInvalidPrivateKeyString = errors.New("invalid private key string")
+	errInvalidPublicKeyString  = errors.New("invalid public key string")
+	errInvalidPrivateKeyLength = errors.New("invalid private key length")
+	errInvalidPublicKeyLength  = errors.New("invalid public key length")
 
 	errInvalidPublicKey  = errors.New("invalid public key format")
 	errInvalidPrivateKey = errors.New("invalid private key format")
@@ -51,19 +51,19 @@ func (kp *KeyPairImpl) Verify(sig, message []byte) bool {
 
 // EncodePrivateKey encode private key to string
 func (kp *KeyPairImpl) EncodePrivateKey() string {
-	return hex.EncodeToString(kp.PrivateKey)
+	return base58.Encode(kp.PrivateKey[:])
 }
 
 // EncodePublicKey encode public key to string
 func (kp *KeyPairImpl) EncodePublicKey() string {
-	return hex.EncodeToString(kp.PublicKey)
+	return base58.Encode(kp.PublicKey[:])
 }
 
 // DecodePrivateKey decode private key hex string
 func (kp *KeyPairImpl) DecodePrivateKey(privKey string) error {
-	privKeyBytes, err := hex.DecodeString(privKey)
+	privKeyBytes, err := base58.Decode(privKey)
 	if err != nil {
-		return errInvalidPrivateKeyHexString
+		return errInvalidPrivateKeyString
 	}
 
 	if len(privKeyBytes) != ed25519.PrivateKeySize {
@@ -77,9 +77,9 @@ func (kp *KeyPairImpl) DecodePrivateKey(privKey string) error {
 
 // DecodePublicKey decode public key hex string
 func (kp *KeyPairImpl) DecodePublicKey(pubKey string) error {
-	pubKeyBytes, err := hex.DecodeString(pubKey)
+	pubKeyBytes, err := base58.Decode(pubKey)
 	if err != nil {
-		return errInvalidPublicKeyHexString
+		return errInvalidPublicKey
 	}
 
 	if len(pubKeyBytes) != ed25519.PublicKeySize {

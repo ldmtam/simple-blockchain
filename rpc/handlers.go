@@ -1,8 +1,6 @@
 package rpc
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,13 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
 	log "github.com/inconshreveable/log15"
 	"github.com/ldmtam/tam-chain/abstraction"
 	"github.com/ldmtam/tam-chain/account"
 	"github.com/ldmtam/tam-chain/common"
 	"github.com/ldmtam/tam-chain/core/transaction"
+	"github.com/mr-tron/base58/base58"
 )
 
 func renderErrorMessage(err error, w http.ResponseWriter) {
@@ -37,19 +34,17 @@ func generateKeypairHandler(w http.ResponseWriter, r *http.Request) {
 		PublicKey  string `json:"public_key"`
 	}
 
-	pubKeyBytes, privKeyBytes, err := ed25519.GenerateKey(rand.Reader)
+	keyPair, err := account.NewKeyPair()
 	if err != nil {
-		log.Error("Cannot generate ed25519 keypair", "error", err)
+		log.Error("cannot generate key pair", "error", err)
 
 		renderErrorMessage(err, w)
 		return
 	}
-	privKey := hex.EncodeToString(privKeyBytes)
-	pubKey := hex.EncodeToString(pubKeyBytes)
 
 	kp := keypair{
-		PrivateKey: privKey,
-		PublicKey:  pubKey,
+		PrivateKey: keyPair.EncodePrivateKey(),
+		PublicKey:  keyPair.EncodePublicKey(),
 	}
 
 	json.NewEncoder(w).Encode(kp)
@@ -157,7 +152,7 @@ func createRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d := map[string]string{"unsigned_raw_tx": hex.EncodeToString(pbMess)}
+	d := map[string]string{"unsigned_raw_tx": base58.Encode(pbMess)}
 	json.NewEncoder(w).Encode(d)
 }
 
@@ -172,7 +167,7 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(b, &data)
 
 	tx := new(transaction.TxImpl)
-	rawTxBytes, err := hex.DecodeString(data.UnsignedRawTx)
+	rawTxBytes, err := base58.Decode(data.UnsignedRawTx)
 	if err != nil {
 		log.Error("cannot convert tx hex string to bytes", "error", err)
 
@@ -208,7 +203,7 @@ func signRawTxHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d := map[string]string{"raw_tx": hex.EncodeToString(txBytes)}
+	d := map[string]string{"raw_tx": base58.Encode(txBytes)}
 	json.NewEncoder(w).Encode(d)
 }
 
@@ -221,7 +216,7 @@ func sendRawTxHandler(w http.ResponseWriter, r *http.Request, txPool abstraction
 	b, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(b, &data)
 
-	txBytes, err := hex.DecodeString(data.RawTx)
+	txBytes, err := base58.Decode(data.RawTx)
 	if err != nil {
 		renderErrorMessage(err, w)
 		return
