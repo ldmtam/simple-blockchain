@@ -32,6 +32,9 @@ P2PMessage protocol:
 // MessageType represents the message type.
 type MessageType uint16
 
+// MessagePriority representss the message priority.
+type MessagePriority uint8
+
 // consts
 const (
 	Ping MessageType = iota + 1
@@ -39,12 +42,17 @@ const (
 	RoutingTableQuery
 	RoutingTableResponse
 	PublishTx
+
+	UrgentMessage = 1
+	NormalMessage = 2
 )
 
 func (m MessageType) String() string {
 	switch m {
 	case Ping:
 		return "Ping"
+	case Pong:
+		return "Pong"
 	case RoutingTableQuery:
 		return "RoutingTableQuery"
 	case RoutingTableResponse:
